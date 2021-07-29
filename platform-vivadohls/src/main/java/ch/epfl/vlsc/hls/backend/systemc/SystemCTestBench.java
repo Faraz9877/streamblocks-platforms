@@ -48,7 +48,7 @@ public interface SystemCTestBench {
         emitter().emit("struct Argument {");
         {
             emitter().increaseIndentation();
-            String pointerType = new LogicVector(64).getType();
+            String pointerType = ObjectFactory.getNewLogicVector(64).getType();
             ImmutableList<String> args = ImmutableList.of(
                     "data_buffer", "meta_buffer", "alloc_size", "head", "tail"
             );

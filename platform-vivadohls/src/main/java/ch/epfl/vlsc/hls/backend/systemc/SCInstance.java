@@ -75,7 +75,7 @@ public class SCInstance implements SCInstanceIF {
 
         this.ret = PortIF.of(
                 "ap_return",
-                Signal.of(name + "_ap_return", new LogicVector(32)),
+                Signal.of(name + "_ap_return", ObjectFactory.getNewLogicVector(32)),
                 Optional.of(PortIF.Kind.OUTPUT));
         this.actionsIds = actionIds;
 

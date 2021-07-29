@@ -163,7 +163,7 @@ public class Queue implements SCIF{
         String tgt = target.getInstance().orElse("") + "_" + target.getPort();
         this.depth = depth;
 
-        type = new LogicVector(width);
+        type = ObjectFactory.getNewLogicVector(width);
         writer = new WriterIF(
                 Signal.of(prefix + "_din", type),
                 prefix + "_write",
@@ -174,8 +174,8 @@ public class Queue implements SCIF{
                 prefix + "_empty_n");
 
         auxiliary = new AuxiliaryIF(
-                Signal.of(prefix + "_count", new LogicVector(32)),
-                Signal.of(prefix + "_size", new LogicVector(32)),
+                Signal.of(prefix + "_count", ObjectFactory.getNewLogicVector(32)),
+                Signal.of(prefix + "_size", ObjectFactory.getNewLogicVector(32)),
                 Signal.of(prefix + "_peek", type));
 
 

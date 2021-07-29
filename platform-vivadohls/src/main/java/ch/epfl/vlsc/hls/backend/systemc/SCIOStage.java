@@ -18,23 +18,23 @@ abstract class SCIOStage implements SCInputOutputIF {
         public KernelArgIF(String instanceName) {
             this.data_buffer = PortIF.of(
                     "data_buffer",
-                    Signal.of(instanceName + "_data_buffer", new LogicVector(64)),
+                    Signal.of(instanceName + "_data_buffer", ObjectFactory.getNewLogicVector(64)),
                     Optional.of(PortIF.Kind.INPUT));
             this.meta_buffer = PortIF.of(
                     "meta_buffer",
-                    Signal.of(instanceName + "_meta_buffer", new LogicVector(64)),
+                    Signal.of(instanceName + "_meta_buffer", ObjectFactory.getNewLogicVector(64)),
                     Optional.of(PortIF.Kind.INPUT));
             this.alloc_size = PortIF.of(
                     "alloc_size",
-                    Signal.of(instanceName + "_alloc_size", new LogicVector(32)),
+                    Signal.of(instanceName + "_alloc_size", ObjectFactory.getNewLogicVector(32)),
                     Optional.of(PortIF.Kind.INPUT));
             this.head = PortIF.of(
                     "head",
-                    Signal.of(instanceName + "_head", new LogicVector(32)),
+                    Signal.of(instanceName + "_head", ObjectFactory.getNewLogicVector(32)),
                     Optional.of(PortIF.Kind.INPUT));
             this.tail = PortIF.of(
                     "tail",
-                    Signal.of(instanceName + "_tail", new LogicVector(32)),
+                    Signal.of(instanceName + "_tail", ObjectFactory.getNewLogicVector(32)),
                     Optional.of(PortIF.Kind.INPUT));
 
 
@@ -68,7 +68,7 @@ abstract class SCIOStage implements SCInputOutputIF {
         this.apControl = new APControl(instanceName + "_");
         this.ret = PortIF.of(
                 "ap_return",
-                Signal.of(instanceName + "_ap_return", new LogicVector(32)),
+                Signal.of(instanceName + "_ap_return", ObjectFactory.getNewLogicVector(32)),
                 Optional.of(PortIF.Kind.OUTPUT)
         );
         this.args = new KernelArgIF(instanceName);

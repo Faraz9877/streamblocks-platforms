@@ -65,6 +65,10 @@ public interface SystemCNetwork {
         return Box.empty();
     }
 
+    static boolean useVerilator() {
+        return false;
+    }
+
     default SCNetwork createSCNetwork(Network network) {
         PortIF initPort = PortIF.of(
                 "kernel_start",

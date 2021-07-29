@@ -48,7 +48,7 @@ public class APControl implements SCIF {
                 Optional.of(PortIF.Kind.OUTPUT));
 //        ret = PortIF.of(
 //                "ap_return",
-//                Signal.of(prefix_ + "return", new LogicVector(32)),
+//                Signal.of(prefix_ + "return", ObjectFactory.getNewLogicVector(32)),
 //                Optional.of(PortIF.Kind.OUTPUT));
     }
 
