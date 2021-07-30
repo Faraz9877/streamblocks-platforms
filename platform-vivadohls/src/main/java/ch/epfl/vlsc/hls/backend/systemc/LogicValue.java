@@ -7,7 +7,6 @@ public class LogicValue implements SCType {
         SC_LOGIC_1;
         @Override
         public String toString() {
-            String ret;
             switch (this) {
                 case SC_LOGIC_0:
                     return "false";

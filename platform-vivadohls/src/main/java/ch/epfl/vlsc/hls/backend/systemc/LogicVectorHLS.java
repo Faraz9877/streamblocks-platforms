@@ -1,8 +1,5 @@
 package ch.epfl.vlsc.hls.backend.systemc;
 
-import se.lth.cs.tycho.reporting.CompilationException;
-import se.lth.cs.tycho.reporting.Diagnostic;
-
 public class LogicVectorHLS extends LogicVector{
 
 
@@ -14,6 +11,10 @@ public class LogicVectorHLS extends LogicVector{
 
     @Override
     public String getType() {
-        return " sc_lv<" + getWidth() + "> ";
+        if (getWidth() == 1) {
+            return "sc_logic";
+        } else {
+            return " sc_lv<" + getWidth() + "> ";
+        }
     }
 }
