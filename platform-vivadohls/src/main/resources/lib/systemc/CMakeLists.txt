@@ -1,106 +1,8 @@
 
 # CMakeLists to generate Systemc simulator
 
-
-# Keep this off for now, still not implemented
-option(VERILATOR_TRACES "Turn on Verilator traces" OFF)
-
-set(VERILATOR_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/verilated)
-
-# Create the output directory for the Verilator generated sources
-file(MAKE_DIRECTORY ${VERILATOR_GEN_DIR})
-
-find_package(verilator HINTS $ENV{VERILATOR_ROOT} ${VERILATOR_ROOT} REQUIRED)
-
-set(VERILATOR_ARGS
-    --sc
-    --clk ap_clk
-    -Wno-fatal
-    --make cmake
-)
-
-if (VERILATOR_TRACES)
-  set(VERILATOR_ARGS
-    ${VERILATOR_ARGS}
-    --trace
-  )
-endif()
-
-
-macro(verilate_actor ACTOR)
-
-  # invisible to the file scope
-  set(${ACTOR}_VERILATED_SOURCES
-    "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule.cpp"
-    "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__1.cpp"
-    "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__2.cpp"
-    "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__3.cpp"
-    "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__4.cpp"
-    "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__5.cpp"
-    "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__6.cpp"
-    "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__7.cpp"
-    "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__8.cpp"
-    "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__9.cpp"
-    "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__Slow.cpp"
-    "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__1__Slow.cpp"
-    "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__2__Slow.cpp"
-    "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__3__Slow.cpp"
-    "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__Syms.cpp"
-  )
-
-  set(${ACTOR}_VERILATED_HEADERS
-    "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule.h"
-    "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__Slow.h"
-    "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__Syms.h"
-  )
-
-  if (VERILATOR_TRACES)
-
-    set(${ACTOR}_VERILATED_SOURCES
-      ${${ACTOR}_VERILATED_SOURCES}
-      "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__Trace__Slow.cpp"
-      "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__Trace.cpp"
-    )
-
-    set(${ACTOR}_VERILATED_HEADERS
-      ${${ACTOR}_VERILATED_HEADERS}
-      "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__Trace__Slow.h"
-      "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__Trace.h"
-    )
-  endif()
-
-
-  foreach(__VLTD_SOURCE__ ${${ACTOR}_VERILATED_SOURCES})
-    if (NOT EXISTS "${__VLTD_SOURCE__}")
-      message(STATUS "Touching ${__VLTD_SOURCE__}")
-      file(TOUCH ${__VLTD_SOURCE__})
-    endif()
-  endforeach()
-
-  # file(TOUCH ${${ACTOR}_VERILATED_SOURCES})
-  # -- targets
-  add_custom_command(
-    OUTPUT ${${ACTOR}_VERILATED_SOURCES} ${${ACTOR}_VERILATED_HEADERS}
-    COMMAND ${VERILATOR_BIN}
-      ${VERILATOR_ARGS}
-      --Mdir ${VERILATOR_GEN_DIR}
-      --prefix ${ACTOR}_verimodule
-      -y ${VERILOG_GEN_DIR}/${ACTOR}/solution/syn/verilog
-      ${${ACTOR}_VERILOG_SOURCE} 2> ${ACTOR}_verimodule.log
-    DEPENDS ${ACTOR}
-    COMMENT "Verilating ${ACTOR}"
-    VERBATIM
-  )
-
-  add_custom_target(
-    ${ACTOR}_verimodule ALL
-    DEPENDS ${${ACTOR}_VERILATED_SOURCES} ${${ACTOR}_VERILATED_HEADERS}
-  )
-
-
-
-endmacro()
-
+# Alters the use of Verilator or VivadoHLS
+option(USE_VERILATOR "Switch to Verilator, or otherwise use Vivado-HLS" OFF)
 
 function(copy_dat_ram_files ACTOR)
   add_custom_command(
@@ -113,96 +15,260 @@ function(copy_dat_ram_files ACTOR)
   )
 endfunction()
 
+if(USE_VERILATOR)
 
-set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
+  # Keep this off for now, still not implemented
+  option(VERILATOR_TRACES "Turn on Verilator traces" OFF)
 
-set(GLOBAL_VERILATED_SOURCES ${VERILATOR_ROOT}/include/verilated.cpp)
+  set(VERILATOR_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/verilated)
 
-if(VERILATOR_TRACES)
+  # Create the output directory for the Verilator generated sources
+  file(MAKE_DIRECTORY ${VERILATOR_GEN_DIR})
 
-  set(GLOBAL_VERILATED_SOURCES
-    ${GLOBAL_VERILATED_SOURCES}
-    ${VERILATOR_ROOT}/include/verilated_vcd_sc.cpp
-    ${VERILATOR_ROOT}/include/verilated_vcd_c.cpp
+  find_package(verilator HINTS $ENV{VERILATOR_ROOT} ${VERILATOR_ROOT} REQUIRED)
+
+  set(VERILATOR_ARGS
+      --sc
+      --clk ap_clk
+      -Wno-fatal
+      --make cmake
   )
 
-endif()
+  if (VERILATOR_TRACES)
+    set(VERILATOR_ARGS
+      ${VERILATOR_ARGS}
+      --trace
+    )
+  endif()
 
+  macro(verilate_actor ACTOR)
 
-# Append the global sources
-set(ALL_VERILATED_SOURCES
-  ${GLOBAL_VERILATED_SOURCES}
-)
-# Append global headers
-set (ALL_VERILATED_HEADERS
-  ${GLOBAL_VERILATED_HEADERS}
-)
-foreach(__ACTOR__ ${__ACTORS_IN_NETWORK__})
-  verilate_actor(${__ACTOR__})
+    # invisible to the file scope
+    set(${ACTOR}_VERILATED_SOURCES
+      "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule.cpp"
+      "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__1.cpp"
+      "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__2.cpp"
+      "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__3.cpp"
+      "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__4.cpp"
+      "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__5.cpp"
+      "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__6.cpp"
+      "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__7.cpp"
+      "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__8.cpp"
+      "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__9.cpp"
+      "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__Slow.cpp"
+      "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__1__Slow.cpp"
+      "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__2__Slow.cpp"
+      "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__3__Slow.cpp"
+      "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__Syms.cpp"
+    )
 
-  # Append actors sources
+    set(${ACTOR}_VERILATED_HEADERS
+      "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule.h"
+      "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__Slow.h"
+      "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__Syms.h"
+    )
+
+    if (VERILATOR_TRACES)
+      set(${ACTOR}_VERILATED_SOURCES
+        ${${ACTOR}_VERILATED_SOURCES}
+        "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__Trace__Slow.cpp"
+        "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__Trace.cpp"
+      )
+      set(${ACTOR}_VERILATED_HEADERS
+        ${${ACTOR}_VERILATED_HEADERS}
+        "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__Trace__Slow.h"
+        "${VERILATOR_GEN_DIR}/${ACTOR}_verimodule__Trace.h"
+      )
+    endif()
+
+    foreach(__VLTD_SOURCE__ ${${ACTOR}_VERILATED_SOURCES})
+      if (NOT EXISTS "${__VLTD_SOURCE__}")
+        message(STATUS "Touching ${__VLTD_SOURCE__}")
+        file(TOUCH ${__VLTD_SOURCE__})
+      endif()
+    endforeach()
+
+    # file(TOUCH ${${ACTOR}_VERILATED_SOURCES})
+    # -- targets
+    add_custom_command(
+      OUTPUT ${${ACTOR}_VERILATED_SOURCES} ${${ACTOR}_VERILATED_HEADERS}
+      COMMAND ${VERILATOR_BIN}
+        ${VERILATOR_ARGS}
+        --Mdir ${VERILATOR_GEN_DIR}
+        --prefix ${ACTOR}_verimodule
+        -y ${VERILOG_GEN_DIR}/${ACTOR}/solution/syn/verilog
+        ${${ACTOR}_VERILOG_SOURCE} 2> ${ACTOR}_verimodule.log
+      DEPENDS ${ACTOR}
+      COMMENT "Verilating ${ACTOR}"
+      VERBATIM
+    )
+
+    add_custom_target(
+      ${ACTOR}_verimodule ALL
+      DEPENDS ${${ACTOR}_VERILATED_SOURCES} ${${ACTOR}_VERILATED_HEADERS}
+    )
+
+  endmacro()
+
+  set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
+
+  set(GLOBAL_VERILATED_SOURCES ${VERILATOR_ROOT}/include/verilated.cpp)
+
+  if(VERILATOR_TRACES)
+    set(GLOBAL_VERILATED_SOURCES
+      ${GLOBAL_VERILATED_SOURCES}
+      ${VERILATOR_ROOT}/include/verilated_vcd_sc.cpp
+      ${VERILATOR_ROOT}/include/verilated_vcd_c.cpp
+    )
+  endif()
+
+  # Append the global sources
   set(ALL_VERILATED_SOURCES
-    ${ALL_VERILATED_SOURCES}
-    ${${__ACTOR__}_VERILATED_SOURCES}
+    ${GLOBAL_VERILATED_SOURCES}
+  )
+  # Append global headers
+  set (ALL_VERILATED_HEADERS
+    ${GLOBAL_VERILATED_HEADERS}
+  )
+  foreach(__ACTOR__ ${__ACTORS_IN_NETWORK__})
+    verilate_actor(${__ACTOR__})
+
+    # Append actors sources
+    set(ALL_VERILATED_SOURCES
+      ${ALL_VERILATED_SOURCES}
+      ${${__ACTOR__}_VERILATED_SOURCES}
+    )
+
+    # Append actor headers
+    set(ALL_VERILATED_HEADERS
+      ${ALL_VERILATED_HEADERS}
+      ${${__ACTOR__}_VERILATED_HEADERS}
+    )
+
+  endforeach()
+
+  set(ART_SYSTEMC_HEADERS
+    ${VIVADO_HLS_INCLUDE_DIRS}
+    ${PROJECT_SOURCE_DIR}/code-gen/include
+    ${PROJECT_SOURCE_DIR}/systemc/include
+    ${VERILATOR_ROOT}/include
+    ${VERILATOR_ROOT}/include/vlstd
+    ${VERILATOR_GEN_DIR}
   )
 
-  # Append actor headers
-  set(ALL_VERILATED_HEADERS
-    ${ALL_VERILATED_HEADERS}
-    ${${__ACTOR__}_VERILATED_HEADERS}
+  add_library(art-systemc STATIC ${ALL_VERILATED_SOURCES} src/trigger.cpp src/profiler.cpp)
+
+  target_include_directories(art-systemc PUBLIC ${ART_SYSTEMC_HEADERS})
+  set_target_properties(art-systemc PROPERTIES
+    CXX_STANDARD 14
+    CXX_STANDARD_REQUIRED YES
+    CXX_EXTENSIONS NO
   )
 
-endforeach()
+  if (VERILATOR_TRACES)
+    target_compile_definitions(art-systemc PUBLIC -DVM_TRACE=1)
+  endif()
 
+  verilator_link_systemc(art-systemc)
 
-set(ART_SYSTEMC_HEADERS
-  ${VIVADO_HLS_INCLUDE_DIRS}
-  ${PROJECT_SOURCE_DIR}/code-gen/include
-  ${PROJECT_SOURCE_DIR}/systemc/include
-  ${VERILATOR_ROOT}/include
-  ${VERILATOR_ROOT}/include/vlstd
-  ${VERILATOR_GEN_DIR}
-)
+  add_executable(simulate src/simulate.cpp)
 
+  target_include_directories(simulate PUBLIC ${ART_SYSTEMC_HEADERS})
 
-add_library(art-systemc STATIC ${ALL_VERILATED_SOURCES} src/trigger.cpp src/profiler.cpp)
+  target_link_libraries(simulate art-systemc)
 
+  set_target_properties(simulate PROPERTIES
+    CXX_STANDARD 14
+    CXX_STANDARD_REQUIRED YES
+    CXX_EXTENSIONS NO
+  )
 
-target_include_directories(art-systemc PUBLIC ${ART_SYSTEMC_HEADERS})
-set_target_properties(art-systemc PROPERTIES
-  CXX_STANDARD 14
-  CXX_STANDARD_REQUIRED YES
-  CXX_EXTENSIONS NO
-)
+  foreach(__ACTOR__ ${__ACTORS_IN_NETWORK__})
+    copy_dat_ram_files(${__ACTOR__})
+  endforeach()
 
-if (VERILATOR_TRACES)
-  target_compile_definitions(art-systemc PUBLIC -DVM_TRACE=1)
 endif()
 
+#######################################################
+elseif(!USE_VERILATOR)
 
-verilator_link_systemc(art-systemc)
+  macro(generate_actor_includes ACTOR)
+    set(ART_SYSTEMC_HEADERS
+      ${ART_SYSTEMC_HEADERS}
+      ${VERILOG_GEN_DIR}/${ACTOR}/solution/syn/systemc
+    )
+  endmacro()
 
-add_executable(simulate src/simulate.cpp)
+  add_custom_target(copy_all_systemc_sources)
+  macro(generate_actor_sources ACTOR)
+    set(ART_SYSTEMC_SOURCES
+      ${ART_SYSTEMC_SOURCES}
+      # ${CMAKE_CURRENT_BINARY_DIR}/${ACTOR}.cpp
+      ${VERILOG_GEN_DIR}/${ACTOR}/solution/syn/systemc/${ACTOR}.cpp
+    )
+    # Mahyar added for individual actor class making
+    # add_library(${ACTOR}_compiled_sc ${CMAKE_CURRENT_BINARY_DIR}/${ACTOR}.cpp)
+    # target_include_directories(${ACTOR}_compiled_sc PUBLIC  
+    #   ${VERILOG_GEN_DIR}/${ACTOR}/solution/syn/systemc 
+    #   /scratch/faraz/missingLibs/
+    #   /opt/systemc/include)
+    # set_target_properties(${ACTOR}_compiled_sc PROPERTIES
+    # 	CXX_STANDARD 14
+    # 	CXX_STANDARD_REQUIRED YES
+    # 	CXX_EXTENSIONS NO
+    # )
+  endmacro()
 
-target_include_directories(simulate PUBLIC ${ART_SYSTEMC_HEADERS})
+  set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} /opt/systemc)
 
-target_link_libraries(simulate art-systemc)
+  set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
 
-set_target_properties(simulate PROPERTIES
-		CXX_STANDARD 14
-		CXX_STANDARD_REQUIRED YES
-		CXX_EXTENSIONS NO
-)
+  set(ART_SYSTEMC_HEADERS
+    ${ART_SYSTEMC_HEADERS}
+    ${VIVADO_HLS_INCLUDE_DIRS}
+    ${PROJECT_SOURCE_DIR}/code-gen/include
+    ${PROJECT_SOURCE_DIR}/systemc/include
+    /scratch/faraz/ # missingLibs/ Is to be specified in the codes
+    /opt/systemc/include
+  )
 
+  foreach(__ACTOR__ ${__ACTORS_IN_NETWORK__})
+    generate_actor_includes(${__ACTOR__})
+    generate_actor_sources(${__ACTOR__})
+  endforeach()
 
+  add_library(art-systemc STATIC ${ART_SYSTEMC_SOURCES} src/trigger.cpp src/profiler.cpp)
 
-foreach(__ACTOR__ ${__ACTORS_IN_NETWORK__})
+  MESSAGE(STATUS "${ART_SYSTEMC_SOURCES}")
 
-  copy_dat_ram_files(${__ACTOR__})
+  target_include_directories(art-systemc PUBLIC ${ART_SYSTEMC_HEADERS})
 
-endforeach()
+  set_target_properties(art-systemc PROPERTIES
+    CXX_STANDARD 14
+    CXX_STANDARD_REQUIRED YES
+    CXX_EXTENSIONS NO
+  )
 
+  add_executable(simulate src/simulate.cpp)
 
+  target_include_directories(simulate PUBLIC ${ART_SYSTEMC_HEADERS})
 
+  target_link_libraries(simulate art-systemc)
 
+  set_target_properties(simulate PROPERTIES
+    CXX_STANDARD 14
+    CXX_STANDARD_REQUIRED YES
+    CXX_EXTENSIONS NO
+  )
 
+  foreach(__ACTOR__ ${__ACTORS_IN_NETWORK__})
+    copy_dat_ram_files(${__ACTOR__})
+  endforeach()
+
+  find_package(SystemCLanguage CONFIG REQUIRED)
+  message(STATUS "${SystemC_INCLUDE_DIR}")
+  message(STATUS "${SYSTEMC_LIBDIR}")
+
+  target_link_libraries(simulate SystemC::systemc)
+
+endif()
