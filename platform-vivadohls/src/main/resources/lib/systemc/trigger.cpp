@@ -27,20 +27,20 @@ AbstractTrigger::AbstractTrigger(sc_core::sc_module_name name,
 
   SC_CTHREAD(setState, ap_clk.pos());
 }
-uint32_t AbstractTrigger::getReturnCode() {
-  return actor_return.read() & 0x00000003;
+sc_dt::sc_lv<32> AbstractTrigger::getReturnCode() {
+  return actor_return.read() & sc_dt::sc_lv<32>(3);
 }
 void AbstractTrigger::setLastWait() {
   while (true) {
     wait(); // wait for clock
-    if (ap_rst_n.read() == false) {
-      waited.write(false);
-    } else if (actor_done.read() == true) {
+    if (ap_rst_n.read() == sc_dt::SC_LOGIC_0) {
+      waited.write(sc_dt::SC_LOGIC_0);
+    } else if (actor_done.read() == sc_dt::SC_LOGIC_1) {
 
       if (actor_return.read() == ReturnStatus::WAIT) {
-        waited.write(true);
+        waited.write(sc_dt::SC_LOGIC_1);
       } else {
-        waited.write(false);
+        waited.write(sc_dt::SC_LOGIC_0);
       }
     }
   }
@@ -49,7 +49,7 @@ void AbstractTrigger::setLastWait() {
 void AbstractTrigger::setState() {
   while (true) {
     wait();
-    if (ap_rst_n.read() == false) {
+    if (ap_rst_n.read() == sc_dt::SC_LOGIC_0) {
       state.write(State::IDLE_STATE);
       clock_counter.write(0);
     } else {
@@ -68,7 +68,7 @@ void AbstractTrigger::profileActor() {
       actor_profiler->start(clock_counter.read());
     }
 
-    uint32_t ret_val = tagged_clock.return_code;
+    uint32_t ret_val = static_cast<uint32_t> ((static_cast<sc_dt::sc_int<32>> (tagged_clock.return_code.read())).value());
 
     uint32_t mask = (1 << 15) - 1;
     uint16_t action_id = (ret_val >> 17) & mask;
@@ -129,35 +129,35 @@ void AbstractTrigger::setWires() {
 
   // actor_start
   if (state.read() == State::LAUNCH || state.read() == State::SYNC_LAUNCH)
-    actor_start.write(true);
+    actor_start.write(sc_dt::SC_LOGIC_1);
   else
-    actor_start.write(false);
+    actor_start.write(sc_dt::SC_LOGIC_0);
 
   // ap_idle
   if (state.read() == State::IDLE_STATE)
-    ap_idle.write(true);
+    ap_idle.write(sc_dt::SC_LOGIC_1);
   else
-    ap_idle.write(false);
+    ap_idle.write(sc_dt::SC_LOGIC_0);
 
   // sleep
   if (state.read() == State::SLEEP || state.read() == State::IDLE_STATE)
-    sleep.write(true);
+    sleep.write(sc_dt::SC_LOGIC_1);
   else
-    sleep.write(false);
+    sleep.write(sc_dt::SC_LOGIC_0);
 
   if (state.read() == State::SYNC_SLEEP || state.read() == State::IDLE_STATE)
-    sync_sleep.write(true);
+    sync_sleep.write(sc_dt::SC_LOGIC_1);
   else
-    sync_sleep.write(false);
+    sync_sleep.write(sc_dt::SC_LOGIC_0);
 
   // ap_done
   // ap_ready
   if (next_state.read() == State::IDLE_STATE) {
-    ap_done.write(true);
-    ap_ready.write(true);
+    ap_done.write(sc_dt::SC_LOGIC_1);
+    ap_ready.write(sc_dt::SC_LOGIC_1);
   } else {
-    ap_done.write(false);
-    ap_ready.write(false);
+    ap_done.write(sc_dt::SC_LOGIC_0);
+    ap_ready.write(sc_dt::SC_LOGIC_0);
   }
 }
 
@@ -215,24 +215,25 @@ void Trigger::setNextState() {
   tagged_clock.return_code = ReturnStatus::IDLE;
   tagged_clock.start = false;
 
-  uint8_t return_code = actor_return.read() & 0x00000003;
+  auto ret_val_of_actor = actor_return.read();
+  uint8_t return_code = static_cast<uint8_t> ((static_cast<sc_dt::sc_int<32>> (ret_val_of_actor & sc_dt::sc_lv<32>(0x00000003))).value());
 
   switch (state.read()) {
   case State::IDLE_STATE:
-    if (ap_start.read() == true) {
-      next_state = State::LAUNCH;
+    if (ap_start.read() == sc_dt::SC_LOGIC_1) {
+      next_state.write(State::LAUNCH);
 
       tagged_clock.start = true;
 
     } else
-      next_state = State::IDLE_STATE;
+      next_state.write(State::IDLE_STATE);
     break;
 
   case State::LAUNCH:
-    if (actor_done.read() == true) {
+    if (actor_done.read() == sc_dt::SC_LOGIC_1) {
       tagged_clock.return_code = actor_return.read();
 
-      if (return_code != ReturnStatus::WAIT || all_waited.read() == false) {
+      if (return_code != ReturnStatus::WAIT || all_waited.read() == sc_dt::SC_LOGIC_0) {
         next_state.write(State::LAUNCH);
 
         tagged_clock.start = true;
@@ -245,12 +246,12 @@ void Trigger::setNextState() {
     }
     break;
   case State::SLEEP:
-    if (all_sleep.read() == true) {
+    if (all_sleep.read() == sc_dt::SC_LOGIC_1) {
       next_state.write(State::SYNC_LAUNCH);
 
       tagged_clock.start = true;
 
-    } else if (all_waited.read() == false) {
+    } else if (all_waited.read() == sc_dt::SC_LOGIC_0) {
       next_state.write(State::LAUNCH);
 
       tagged_clock.start = true;
@@ -261,7 +262,7 @@ void Trigger::setNextState() {
     break;
 
   case State::SYNC_LAUNCH:
-    if (actor_done.read() == true) {
+    if (actor_done.read() == sc_dt::SC_LOGIC_1) {
       tagged_clock.return_code = actor_return.read();
 
       next_state.write(State::SYNC_SLEEP);
@@ -272,8 +273,8 @@ void Trigger::setNextState() {
     break;
 
   case State::SYNC_SLEEP:
-    if (all_sync_sleep.read() == true)
-      if (all_waited.read() == true) {
+    if (all_sync_sleep.read() == sc_dt::SC_LOGIC_1)
+      if (all_waited.read() == sc_dt::SC_LOGIC_1) {
 
         next_state.write(State::IDLE_STATE);
 
@@ -316,28 +317,30 @@ void PipelinedTrigger::enableTrace(sc_core::sc_trace_file *vcd_dump) {
 void PipelinedTrigger::setNextState() {
   next_state.write(State::IDLE_STATE);
   next_outstanding.write(-1);
-  uint8_t return_code = actor_return.read() & 0x00000003;
+  // uint8_t return_code = actor_return.read() & 0x00000003;
+  uint8_t return_code = static_cast<uint8_t> ((static_cast<sc_dt::sc_int<32>> (actor_return.read() & sc_dt::sc_lv<32>(0x00000003))).value());
+
   tagged_clock.return_code = ReturnStatus::IDLE;
   tagged_clock.start = false;
 
   switch (state.read()) {
   case State::IDLE_STATE:
     next_outstanding.write(1);
-    if (ap_start.read() == true) {
+    if (ap_start.read() == sc_dt::SC_LOGIC_1) {
 
-      next_state = State::LAUNCH;
+      next_state.write(State::LAUNCH);
       tagged_clock.start = true;
 
     } else
-      next_state = State::IDLE_STATE;
+      next_state.write(State::IDLE_STATE);
     break;
 
   case State::LAUNCH:
-    if (actor_done.read() == true) {
+    if (actor_done.read() == sc_dt::SC_LOGIC_1) {
       tagged_clock.return_code = return_code;
       // ASSERT(first_invocation.read() == false,
       //        "Unexpected actor_done pulse in %s!\n", this->name());
-      if (return_code == ReturnStatus::WAIT && all_waited.read() == true) {
+      if (return_code == ReturnStatus::WAIT && all_waited.read() == sc_dt::SC_LOGIC_1) {
 
         next_outstanding.write(outstanding_invocations.read() - 1);
         if (outstanding_invocations.read() == 1) {
@@ -348,7 +351,7 @@ void PipelinedTrigger::setNextState() {
       } else {
         next_state.write(State::LAUNCH);
 
-        if (actor_ready.read() == true) {
+        if (actor_ready.read() == sc_dt::SC_LOGIC_1) {
           tagged_clock.start = true;
           next_outstanding.write(outstanding_invocations.read());
         } else {
@@ -357,7 +360,7 @@ void PipelinedTrigger::setNextState() {
       }
     } else { // actor_done.read() == false
       next_state.write(State::LAUNCH);
-      if (actor_ready.read() == true) {
+      if (actor_ready.read() == sc_dt::SC_LOGIC_1) {
         tagged_clock.start = true;
         next_outstanding.write(outstanding_invocations.read() + 1);
       } else {
@@ -367,7 +370,7 @@ void PipelinedTrigger::setNextState() {
 
     break;
   case State::FLUSH:
-    if (actor_done.read() == true) {
+    if (actor_done.read() == sc_dt::SC_LOGIC_1) {
       /**
        * At the FLUSH state, we can only go to LAUNCH if (all_waited == false
        * || returnc_code != WAIT), now in this case, we also have to make sure
@@ -376,7 +379,7 @@ void PipelinedTrigger::setNextState() {
        */
       tagged_clock.return_code = return_code;
       bool should_relauch =
-          (all_waited.read() == false || return_code != ReturnStatus::WAIT);
+          (all_waited.read() == sc_dt::SC_LOGIC_0 || return_code != ReturnStatus::WAIT);
       if (outstanding_invocations.read() == 1) {
         // we have just received the last invocation
         if (should_relauch) {
@@ -403,10 +406,10 @@ void PipelinedTrigger::setNextState() {
     break;
   case State::SLEEP:
     // ASSERT(outstanding_invocations.read() == 0, "Outstanding invok")
-    if (all_sleep.read() == true) {
+    if (all_sleep.read() == sc_dt::SC_LOGIC_1) {
       next_state.write(State::SYNC_LAUNCH);
       tagged_clock.start = true;
-    } else if (all_waited.read() == false) {
+    } else if (all_waited.read() == sc_dt::SC_LOGIC_0) {
       tagged_clock.start = true;
       next_state.write(State::LAUNCH);
     } else
@@ -416,7 +419,7 @@ void PipelinedTrigger::setNextState() {
 
   case State::SYNC_LAUNCH:
   case State::SYNC_FLUSH:
-    if (actor_done.read() == true) {
+    if (actor_done.read() == sc_dt::SC_LOGIC_1) {
       tagged_clock.return_code = return_code;
       next_state.write(State::SYNC_SLEEP);
     } else {
@@ -425,8 +428,8 @@ void PipelinedTrigger::setNextState() {
     next_outstanding.write(1);
     break;
   case State::SYNC_SLEEP:
-    if (all_sync_sleep.read() == true) {
-      if (all_waited.read() == true)
+    if (all_sync_sleep.read() == sc_dt::SC_LOGIC_1) {
+      if (all_waited.read() == sc_dt::SC_LOGIC_1)
         next_state.write(State::IDLE_STATE);
       else {
         tagged_clock.start = true;

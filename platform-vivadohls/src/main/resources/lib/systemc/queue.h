@@ -15,24 +15,24 @@ template <typename T> class Queue : public sc_core::sc_module {
 public:
   const unsigned int fifo_depth;
   sc_core::sc_in_clk ap_clk;
-  sc_core::sc_in<bool> ap_rst_n;
-  sc_core::sc_out<bool> empty_n;
+  sc_core::sc_in<sc_dt::sc_logic> ap_rst_n;
+  sc_core::sc_out<sc_dt::sc_logic> empty_n;
 
-  sc_core::sc_in<bool> read;
+  sc_core::sc_in<sc_dt::sc_logic> read;
   sc_core::sc_out<T> dout;
 
-  sc_core::sc_out<bool> full_n;
+  sc_core::sc_out<sc_dt::sc_logic> full_n;
 
-  sc_core::sc_in<bool> write;
+  sc_core::sc_in<sc_dt::sc_logic> write;
   sc_core::sc_in<T> din;
 
   // -- Extended io
-  sc_core::sc_out<uint32_t> count;
-  sc_core::sc_out<uint32_t> size;
+  sc_core::sc_out<sc_dt::sc_lv<32>> count;
+  sc_core::sc_out<sc_dt::sc_lv<32>> size;
   sc_core::sc_out<T> peek;
 
-  sc_core::sc_signal<bool> internal_empty_n;
-  sc_core::sc_signal<bool> internal_full_n;
+  sc_core::sc_signal<sc_dt::sc_logic> internal_empty_n;
+  sc_core::sc_signal<sc_dt::sc_logic> internal_full_n;
 
   std::vector<sc_core::sc_signal<T>> mStorage;
   sc_core::sc_signal<uint32_t> mInPtr;
@@ -78,19 +78,19 @@ public:
 
   void proc_read_write() {
     size.write(fifo_depth);
-    if (ap_rst_n.read() == false) {
+    if (ap_rst_n.read() == sc_dt::SC_LOGIC_0) {
       mInPtr.write(0);
       mOutPtr.write(0);
       mFlag_nEF_hint.write(0);
       count.write(0);
     } else {
-      uint32_t new_count = count.read();
+      uint32_t new_count = static_cast<uint32_t> ((static_cast<sc_dt::sc_int<32>> (count.read())).value());
 
-      DEBUG_ASSERT(!(read.read() == true && internal_empty_n.read() == false),
+      DEBUG_ASSERT(!(read.read() == sc_dt::SC_LOGIC_1 && internal_empty_n.read() == sc_dt::SC_LOGIC_0),
                    "@ %s trying to read from an empty fifo %s\n",
                    sc_time_stamp().to_string().c_str(), this->name());
 
-      if (read.read() == true && internal_empty_n.read() == true) {
+      if (read.read() == sc_dt::SC_LOGIC_1 && internal_empty_n.read() == sc_dt::SC_LOGIC_1) {
         uint32_t ptr;
         read_counter.write(read_counter.read() + 1);
         if (mOutPtr.read() == (fifo_depth - 1)) {
@@ -109,11 +109,11 @@ public:
         mOutPtr.write(ptr);
       }
 
-      DEBUG_ASSERT(!(write.read() == true && internal_full_n.read() == false),
+      DEBUG_ASSERT(!(write.read() == sc_dt::SC_LOGIC_1 && internal_full_n.read() == sc_dt::SC_LOGIC_0),
                    "@ %s trying to write to a full fifo %s\n",
                    sc_time_stamp().to_string().c_str(), this->name());
 
-      if (write.read() == true && internal_full_n.read() == true) {
+      if (write.read() == sc_dt::SC_LOGIC_1 && internal_full_n.read() == sc_dt::SC_LOGIC_1) {
         uint32_t ptr;
         ptr = mInPtr.read();
         write_counter.write(write_counter.read() + 1);
@@ -149,15 +149,15 @@ public:
   void proc_ptr() {
     if (mInPtr.read() == mOutPtr.read() &&
         mFlag_nEF_hint.read().to_uint() == 0) {
-      internal_empty_n.write(false);
+      internal_empty_n.write(sc_dt::SC_LOGIC_0);
     } else {
-      internal_empty_n.write(true);
+      internal_empty_n.write(sc_dt::SC_LOGIC_1);
     }
     if (mInPtr.read() == mOutPtr.read() &&
         mFlag_nEF_hint.read().to_uint() == 1) {
-      internal_full_n.write(false);
+      internal_full_n.write(sc_dt::SC_LOGIC_0);
     } else {
-      internal_full_n.write(true);
+      internal_full_n.write(sc_dt::SC_LOGIC_1);
     }
   }
   void enableTrace(sc_core::sc_trace_file* vcd_dump) {

@@ -9,9 +9,15 @@ public class LogicValue implements SCType {
         public String toString() {
             switch (this) {
                 case SC_LOGIC_0:
-                    return "false";
+                    if(SystemCNetwork.useVerilator())
+                        return "false";
+                    else
+                        return "SC_LOGIC_0";
                 case SC_LOGIC_1:
-                    return "true";
+                    if(SystemCNetwork.useVerilator())
+                        return "true";
+                    else
+                        return "SC_LOGIC_1";
                 default:
                     return "ERROR";
             }
@@ -19,7 +25,10 @@ public class LogicValue implements SCType {
     };
     @Override
     public String getType() {
-        return "bool";
+        if(SystemCNetwork.useVerilator())
+            return "bool";
+        else
+            return "sc_logic";
     }
 
 }

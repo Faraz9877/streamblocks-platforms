@@ -8,7 +8,11 @@ import java.util.stream.Stream;
 public class SCInstance implements SCInstanceIF {
 
     public static String makeName(String instanceName) {
-        return instanceName + "_verimodule";
+        if(SystemCNetwork.useVerilator())
+            return instanceName + "_verimodule";
+        else
+            // return "systemc/" + instanceName;
+            return instanceName;
     }
     public static class OutputIF implements SCIF {
         private final Queue.WriterIF writer;

@@ -175,8 +175,8 @@ template <typename T> struct SimulationBuffer {
   ap_rtl::Argument asArgument() {
     return ap_rtl::Argument(
         reinterpret_cast<ap_rtl::Argument::sim_ptr_t>(data_buffer),
-        reinterpret_cast<ap_rtl::Argument::sim_ptr_t>(meta_buffer), alloc_size,
-        head, tail);
+        reinterpret_cast<ap_rtl::Argument::sim_ptr_t>(meta_buffer),
+        alloc_size, head, tail);
   }
 
   uint32_t freeSpace() {
@@ -284,7 +284,7 @@ public:
 
     auto free_space = host_buffer->freeSpace();
 
-    uint64_t token;
+    T token;
 
     uint32_t count = 0;
     while (free_space > 0 && this->istream >> token) {
@@ -318,11 +318,11 @@ public:
     const auto start_ix = this->index;
 
     while (host_buffer->freeSpace() != host_buffer->alloc_size - 1) {
-      uint64_t expected_token = 0;
+      T expected_token = 0;
       if (this->istream >> expected_token) {
         auto token = host_buffer->readToken();
 
-        ASSERT(T(expected_token) == token,
+        ASSERT(expected_token == token,
                "%s::Expected %lu but received %lu (%lu)\n",
                this->port_name.c_str(), expected_token, token, this->index);
         this->index++;

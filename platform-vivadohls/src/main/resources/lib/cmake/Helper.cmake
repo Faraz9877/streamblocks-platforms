@@ -140,14 +140,19 @@ set(HLS_TESTER_HEADER_PATH ${PROJECT_SOURCE_DIR}/code-gen/include-tb)
 # -- --------------------------------------------------------------------------
 # -- Helper macro to synthesize actor using vivado hls
 # -- --------------------------------------------------------------------------
-
 macro(synthesize_actor ACTOR)
 
 	# This is visible in the file scope
-	set(${ACTOR}_VERILOG_SOURCE "${VERILOG_GEN_DIR}/${ACTOR}/solution/syn/verilog/${ACTOR}.v")
+	set(${ACTOR}_VERILOG_SOURCE
+		${VERILOG_GEN_DIR}/${ACTOR}/solution/syn/verilog/${ACTOR}.v
+		
+	)
+	set(${ACTOR}_SYSTEMC_SOURCE
+		${VERILOG_GEN_DIR}/${ACTOR}/solution/syn/systemc/${ACTOR}.cpp
+	)
 
 	add_custom_command(
-		OUTPUT ${${ACTOR}_VERILOG_SOURCE}
+		OUTPUT ${${ACTOR}_VERILOG_SOURCE} ${${ACTOR}_SYSTEMC_SOURCE}
 		COMMAND ${HLS_TOOL} -f Synthesis.tcl -tclargs ${ACTOR} ${ACTOR}.cpp > ${ACTOR}.log
 		DEPENDS ${HLS_HEADER_PATH}/${ACTOR}.h ${HLS_SOURCE_PATH}/${ACTOR}.cpp
 		COMMENT	"CSynthesizing ${ACTOR}"
@@ -155,7 +160,7 @@ macro(synthesize_actor ACTOR)
 	)
 
 	add_custom_target(
-		${ACTOR} ALL DEPENDS ${${ACTOR}_VERILOG_SOURCE}
+		${ACTOR} ALL DEPENDS ${${ACTOR}_VERILOG_SOURCE} ${${ACTOR}_SYSTEMC_SOURCE}
 	)
 
 endmacro()
@@ -166,7 +171,10 @@ endmacro()
 macro(synthesize_io ACTOR TYPE)
 
 	# This is visible in the file scope
-	set(${ACTOR}_VERILOG_SOURCE "${VERILOG_GEN_DIR}/${ACTOR}/solution/syn/verilog/${ACTOR}.v")
+	set(${ACTOR}_VERILOG_SOURCE
+		"${VERILOG_GEN_DIR}/${ACTOR}/solution/syn/verilog/${ACTOR}.v"
+		"${VERILOG_GEN_DIR}/${ACTOR}/solution/syn/verilog/${ACTOR}.cpp"
+	)
 
   configure_io(${ACTOR} ${TYPE})
 

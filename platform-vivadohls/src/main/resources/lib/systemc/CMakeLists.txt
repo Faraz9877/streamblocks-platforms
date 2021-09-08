@@ -2,7 +2,7 @@
 # CMakeLists to generate Systemc simulator
 
 # Alters the use of Verilator or VivadoHLS
-option(USE_VERILATOR "Switch to Verilator, or otherwise use Vivado-HLS" OFF)
+option(USE_VERILATOR "Switch to Verilator, or otherwise use Vivado-HLS" ON)
 
 function(copy_dat_ram_files ACTOR)
   add_custom_command(
@@ -15,7 +15,12 @@ function(copy_dat_ram_files ACTOR)
   )
 endfunction()
 
+set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} /opt/systemc)
+
+set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
+
 if(USE_VERILATOR)
+  message(STATUS "Using Verilator")
 
   # Keep this off for now, still not implemented
   option(VERILATOR_TRACES "Turn on Verilator traces" OFF)
@@ -110,8 +115,6 @@ if(USE_VERILATOR)
 
   endmacro()
 
-  set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
-
   set(GLOBAL_VERILATED_SOURCES ${VERILATOR_ROOT}/include/verilated.cpp)
 
   if(VERILATOR_TRACES)
@@ -170,32 +173,14 @@ if(USE_VERILATOR)
   endif()
 
   verilator_link_systemc(art-systemc)
-
-  add_executable(simulate src/simulate.cpp)
-
-  target_include_directories(simulate PUBLIC ${ART_SYSTEMC_HEADERS})
-
-  target_link_libraries(simulate art-systemc)
-
-  set_target_properties(simulate PROPERTIES
-    CXX_STANDARD 14
-    CXX_STANDARD_REQUIRED YES
-    CXX_EXTENSIONS NO
-  )
-
-  foreach(__ACTOR__ ${__ACTORS_IN_NETWORK__})
-    copy_dat_ram_files(${__ACTOR__})
-  endforeach()
-
-endif()
-
 #######################################################
-elseif(!USE_VERILATOR)
+elseif(NOT USE_VERILATOR)
+  message(STATUS "Using VivadoHLS")
 
   macro(generate_actor_includes ACTOR)
     set(ART_SYSTEMC_HEADERS
       ${ART_SYSTEMC_HEADERS}
-      ${VERILOG_GEN_DIR}/${ACTOR}/solution/syn/systemc
+      ${VERILOG_GEN_DIR}/${ACTOR}/solution/syn # /systemc is to be specified in actor headers
     )
   endmacro()
 
@@ -206,8 +191,15 @@ elseif(!USE_VERILATOR)
       # ${CMAKE_CURRENT_BINARY_DIR}/${ACTOR}.cpp
       ${VERILOG_GEN_DIR}/${ACTOR}/solution/syn/systemc/${ACTOR}.cpp
     )
+    add_custom_command(
+      OUTPUT ${VERILOG_GEN_DIR}/${ACTOR}/solution/syn/systemc/${ACTOR}.cpp 
+      DEPENDS ${ACTOR}
+    )
     # Mahyar added for individual actor class making
-    # add_library(${ACTOR}_compiled_sc ${CMAKE_CURRENT_BINARY_DIR}/${ACTOR}.cpp)
+    message(STATUS "This actor's source file is in: ${CMAKE_CURRENT_BINARY_DIR}/${ACTOR}.cpp")
+    # add_library(${ACTOR}_compiled_sc ${VERILOG_GEN_DIR}/${ACTOR}/solution/syn/systemc/${ACTOR}.cpp)
+    
+    # add_dependencies(${ACTOR}_compiled_sc ${ACTOR})
     # target_include_directories(${ACTOR}_compiled_sc PUBLIC  
     #   ${VERILOG_GEN_DIR}/${ACTOR}/solution/syn/systemc 
     #   /scratch/faraz/missingLibs/
@@ -219,16 +211,12 @@ elseif(!USE_VERILATOR)
     # )
   endmacro()
 
-  set(CMAKE_PREFIX_PATH ${CMAKE_PREFIX_PATH} /opt/systemc)
-
-  set(EXECUTABLE_OUTPUT_PATH ${CMAKE_SOURCE_DIR}/bin)
-
   set(ART_SYSTEMC_HEADERS
     ${ART_SYSTEMC_HEADERS}
     ${VIVADO_HLS_INCLUDE_DIRS}
     ${PROJECT_SOURCE_DIR}/code-gen/include
     ${PROJECT_SOURCE_DIR}/systemc/include
-    /scratch/faraz/ # missingLibs/ Is to be specified in the codes
+    /scratch/faraz/missingLibs/ # missingLibs/ Is to be specified in the codes
     /opt/systemc/include
   )
 
@@ -248,27 +236,23 @@ elseif(!USE_VERILATOR)
     CXX_STANDARD_REQUIRED YES
     CXX_EXTENSIONS NO
   )
-
-  add_executable(simulate src/simulate.cpp)
-
-  target_include_directories(simulate PUBLIC ${ART_SYSTEMC_HEADERS})
-
-  target_link_libraries(simulate art-systemc)
-
-  set_target_properties(simulate PROPERTIES
-    CXX_STANDARD 14
-    CXX_STANDARD_REQUIRED YES
-    CXX_EXTENSIONS NO
-  )
-
-  foreach(__ACTOR__ ${__ACTORS_IN_NETWORK__})
-    copy_dat_ram_files(${__ACTOR__})
-  endforeach()
-
-  find_package(SystemCLanguage CONFIG REQUIRED)
-  message(STATUS "${SystemC_INCLUDE_DIR}")
-  message(STATUS "${SYSTEMC_LIBDIR}")
-
-  target_link_libraries(simulate SystemC::systemc)
-
 endif()
+
+add_executable(simulate src/simulate.cpp)
+
+target_include_directories(simulate PUBLIC ${ART_SYSTEMC_HEADERS})
+
+target_link_libraries(simulate art-systemc)
+
+set_target_properties(simulate PROPERTIES
+  CXX_STANDARD 14
+  CXX_STANDARD_REQUIRED YES
+  CXX_EXTENSIONS NO
+)
+
+foreach(__ACTOR__ ${__ACTORS_IN_NETWORK__})
+  copy_dat_ram_files(${__ACTOR__})
+endforeach()
+
+find_package(SystemCLanguage CONFIG REQUIRED)
+target_link_libraries(simulate SystemC::systemc)

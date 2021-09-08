@@ -204,7 +204,7 @@ private:
 #pragma HLS INLINE
     // meta_buffer[0] = this->tail;
     if (sizeof(T) >= sizeof(uint32_t)) {
-      meta_buffer[0] = this->tail;
+      reinterpret_cast<uint32_t*>(meta_buffer)[0] = this->tail;
     } else {
       uint32_t current_tail = this->tail;
       for (int ix = 0; ix < sizeof(uint32_t) / sizeof(T); ix++) {
@@ -338,7 +338,8 @@ private:
 #pragma HLS INLINE
 
     if (sizeof(T) >= sizeof(uint32_t)) {
-      meta_buffer[0] = this->head;
+      // meta_buffer[0] = static_cast<float>(this->head);
+      reinterpret_cast<uint32_t*>(meta_buffer)[0] = this->head;
     } else {
 
       uint32_t current_head = this->head;

@@ -22,33 +22,33 @@ public:
   // -- systemc model interfaces
   sc_core::sc_in_clk ap_clk;
 
-  sc_core::sc_in<bool> kernel_start;
+  sc_core::sc_in<sc_dt::sc_logic> kernel_start;
 
-  sc_core::sc_in<bool> ap_rst_n;
-  sc_core::sc_out<bool> ap_done;
-  sc_core::sc_out<bool> ap_idle;
-  sc_core::sc_out<bool> ap_ready;
-  sc_core::sc_in<bool> ap_start;
-  sc_core::sc_out<uint32_t> ap_return;
+  sc_core::sc_in<sc_dt::sc_logic> ap_rst_n;
+  sc_core::sc_out<sc_dt::sc_logic> ap_done;
+  sc_core::sc_out<sc_dt::sc_logic> ap_idle;
+  sc_core::sc_out<sc_dt::sc_logic> ap_ready;
+  sc_core::sc_in<sc_dt::sc_logic> ap_start;
+  sc_core::sc_out<sc_dt::sc_lv<32>> ap_return;
 
   // -- C model interfaces
-  sc_core::sc_in<uintptr_t> data_buffer;
-  sc_core::sc_in<uintptr_t> meta_buffer;
-  sc_core::sc_in<uint32_t> alloc_size;
-  sc_core::sc_in<uint32_t> head;
-  sc_core::sc_in<uint32_t> tail;
+  sc_core::sc_in<sc_dt::sc_lv<64>> data_buffer;
+  sc_core::sc_in<sc_dt::sc_lv<64>> meta_buffer;
+  sc_core::sc_in<sc_dt::sc_lv<32>> alloc_size;
+  sc_core::sc_in<sc_dt::sc_lv<32>> head;
+  sc_core::sc_in<sc_dt::sc_lv<32>> tail;
 
   hls::stream<bool> meta_stream;
   hls::stream<T> data_stream;
   // fifo intrefaces are input or output specific and are included in
   // the derived class
-  sc_core::sc_in<uint32_t> fifo_count;
+  sc_core::sc_in<sc_dt::sc_lv<32>> fifo_count;
 
   sc_core::sc_signal<uint32_t> tokens_processed;
   // -- the underlying implementation (functional) in C++, which is
   // also used with Vivado HLS to generate the actual RTL implementation
   std::unique_ptr<iostage::BusInterface<T, FIFO_SIZE>> atomic_implementation;
-  uint32_t return_code;
+  sc_dt::sc_lv<32> return_code;
   enum State {
     BUSIF_IDLE = 0,
     BUSIF_CALL_FUNCTION = 1,
@@ -117,15 +117,15 @@ public:
       this->waitCycles(1); // for clock
       State next_state = State::BUSIF_IDLE;
 
-      if (this->ap_rst_n.read() == false) {
+      if (this->ap_rst_n.read() == sc_dt::SC_LOGIC_0) {
         this->state.write(State::BUSIF_IDLE);
       } else {
         switch (this->state.read()) {
         case State::BUSIF_IDLE:
-          ASSERT(!(this->kernel_start.read() == true &&
-                   this->ap_start.read() == true),
+          ASSERT(!(this->kernel_start.read() == sc_dt::SC_LOGIC_1 &&
+                   this->ap_start.read() == sc_dt::SC_LOGIC_1),
                  "Both kernel and ap start are high!\n");
-          if (this->kernel_start.read() == true) {
+          if (this->kernel_start.read() == sc_dt::SC_LOGIC_1) {
             this->enqueueMetaStream();
           }
           next_state = this->nextState();
@@ -180,11 +180,11 @@ public:
    */
   void wireEvaluator() {
     // ap_idle
-    this->ap_idle.write(this->state.read() == State::BUSIF_IDLE);
+    this->ap_idle.write(this->state.read() == State::BUSIF_IDLE ? sc_dt::SC_LOGIC_1 : sc_dt::SC_LOGIC_0);
 
     // ap_done and ap_ready have the same logic
-    this->ap_done.write(this->state.read() == State::BUSIF_DONE);
-    this->ap_ready.write(this->state.read() == State::BUSIF_DONE);
+    this->ap_done.write(this->state.read() == State::BUSIF_DONE ? sc_dt::SC_LOGIC_1 : sc_dt::SC_LOGIC_0);
+    this->ap_ready.write(this->state.read() == State::BUSIF_DONE ? sc_dt::SC_LOGIC_1 : sc_dt::SC_LOGIC_0);
     // ap_return
     this->ap_return.write(
         this->state.read() == State::BUSIF_DONE ? this->return_code : -1);
@@ -206,7 +206,7 @@ public:
    * SC_CTHREAD
    *
    */
-  inline virtual uint32_t evaluateAtomically() = 0;
+  inline virtual sc_dt::sc_lv<32> evaluateAtomically() = 0;
 
   /**
    * @brief streams the burst chunks to or from the fifos
@@ -222,6 +222,16 @@ public:
    * @return State the next state
    */
   virtual State nextState() = 0;
+
+  T *asPointer(const sc_dt::sc_lv<64>& ptr) {
+    const sc_dt::sc_int<64> ptr_as_int = ptr;
+    return reinterpret_cast<T *>(ptr_as_int.value());
+  }
+
+  T *asPointer(const sc_dt::sc_lv<32>& ptr) {
+    const sc_dt::sc_int<32> ptr_as_int = ptr;
+    return reinterpret_cast<T *>(ptr_as_int.value());
+  }
 
   T *asPointer(const uintptr_t ptr) { return reinterpret_cast<T *>(ptr); }
 
@@ -250,10 +260,10 @@ template <typename T_SC, typename T_CPP, int FIFO_SIZE>
 class SimulatedInputMemoryStage
     : public SimulatedBusInterface<T_CPP, FIFO_SIZE> {
 public:
-  sc_core::sc_in<bool> fifo_full_n;
-  sc_core::sc_out<bool> fifo_write;
+  sc_core::sc_in<sc_dt::sc_logic> fifo_full_n;
+  sc_core::sc_out<sc_dt::sc_logic> fifo_write;
   sc_core::sc_out<T_SC> fifo_din;
-  sc_core::sc_in<uint32_t> fifo_size;
+  sc_core::sc_in<sc_dt::sc_lv<32>> fifo_size;
   using State = typename SimulatedBusInterface<T_CPP, FIFO_SIZE>::State;
 
   SimulatedInputMemoryStage(sc_core::sc_module_name name)
@@ -265,18 +275,19 @@ public:
         std::make_unique<iostage::InputMemoryStage<T_CPP, FIFO_SIZE>>();
   }
 
-  inline uint32_t evaluateAtomically() {
+  inline sc_dt::sc_lv<32> evaluateAtomically() {
 
     return this->atomic_implementation->operator()(
-        this->asPointer(this->data_buffer.read()), // The device buffer pointer
+        this->asPointer(
+          (static_cast<sc_dt::sc_int<64>> (this->data_buffer.read())).value()), // The device buffer pointer
                                                    // (allocated else where)
         this->asPointer(
-            this->meta_buffer.read()), // The device meta buffer pointer
+          (static_cast<sc_dt::sc_int<64>> (this->meta_buffer.read())).value()), // The device meta buffer pointer
                                        // (allocated else where)
-        this->alloc_size.read(),       // Allocated size in words
-        this->head.read(),             // head index of the data buffer
-        this->tail.read(),             // tail index of the deta buffer
-        this->fifo_count.read(), // number of elements in the attached fifo
+        (static_cast<sc_dt::sc_int<32>> (this->alloc_size.read())).value(),       // Allocated size in words
+        (static_cast<sc_dt::sc_int<32>> (this->head.read())).value(),             // head index of the data buffer
+        (static_cast<sc_dt::sc_int<32>> (this->tail.read())).value(),             // tail index of the deta buffer
+        (static_cast<sc_dt::sc_int<32>> (this->fifo_count.read())).value(), // number of elements in the attached fifo
         this->data_stream,       // atomic data stream
         this->meta_stream        // atomic meta stream
     );
@@ -306,20 +317,25 @@ public:
                                 ? (tokens_to_stream - burst_ix)
                                 : MAX_BURST_LINES;
       for (uint32_t ix = 0; ix < chunk_size; ix++) {
-        ASSERT(this->fifo_full_n.read() == true,
+        ASSERT(this->fifo_full_n.read() == sc_dt::SC_LOGIC_1,
                "Attempted to write to a full fifo in an input stage!\n");
         ASSERT(this->data_stream.size() > 0,
                "Attempted to read from an empty hls::stream!\n");
         T_CPP token = this->data_stream.read();
         this->tokens_processed.write(this->tokens_processed.read() + 1);
         this->waitCycles(1);
-        this->fifo_din.write(token);
-        this->fifo_write.write(true);
+
+        uint64_t token_raw = 0;
+        ASSERT(sizeof(T_CPP) <= sizeof(uint64_t), "Unsupported data type of size %lu in input stage \n", sizeof(T_CPP));
+        std::memcpy(&token_raw, &token, sizeof(T_CPP));
+
+        this->fifo_din.write(token_raw);
+        this->fifo_write.write(sc_dt::SC_LOGIC_1);
       }
 
       this->waitCycles(1);
 
-      this->fifo_write.write(false);
+      this->fifo_write.write(sc_dt::SC_LOGIC_0);
       this->waitCycles(10);
     }
   }
@@ -327,7 +343,7 @@ public:
   State nextState() override {
     switch (this->state.read()) {
     case State::BUSIF_IDLE:
-      if (this->ap_start.read() == true)
+      if (this->ap_start.read() == sc_dt::SC_LOGIC_1)
         return State::BUSIF_CALL_FUNCTION;
       else
         return State::BUSIF_IDLE;
@@ -363,8 +379,8 @@ template <typename T_SC, typename T_CPP, int FIFO_SIZE>
 class SimulatedOutputMemoryStage
     : public SimulatedBusInterface<T_CPP, FIFO_SIZE> {
 public:
-  sc_core::sc_in<bool> fifo_empty_n;
-  sc_core::sc_out<bool> fifo_read;
+  sc_core::sc_in<sc_dt::sc_logic> fifo_empty_n;
+  sc_core::sc_out<sc_dt::sc_logic> fifo_read;
   sc_core::sc_in<T_SC> fifo_dout;
   sc_core::sc_in<T_SC> fifo_peek;
   using State = typename SimulatedBusInterface<T_CPP, FIFO_SIZE>::State;
@@ -398,7 +414,7 @@ public:
     const auto MAX_NUMBER_OF_BURST =
         iostage::BusInterface<T_CPP, FIFO_SIZE>::MAX_NUMBER_OF_BURSTS;
     // The number of tokens that are read from the memory is obtained
-    auto old_fifo_count = this->fifo_count.read();
+    auto old_fifo_count = static_cast<uint32_t> ((static_cast<sc_dt::sc_int<32>> (this->fifo_count.read())).value());
     auto tokens_to_stream =
         this->atomic_implementation->tokensToProcess(old_fifo_count);
 
@@ -414,31 +430,34 @@ public:
                                 : MAX_BURST_LINES;
       for (uint32_t ix = 0; ix < chunk_size; ix++) {
 
-        ASSERT(this->fifo_empty_n.read() == true,
+        ASSERT(this->fifo_empty_n.read() == sc_dt::SC_LOGIC_1,
                "Attempted to read from an empty fifo in an output stage\n");
-        this->fifo_read.write(true);
+        this->fifo_read.write(sc_dt::SC_LOGIC_1);
         this->tokens_processed.write(this->tokens_processed.read() + 1);
         this->waitCycles(1);
-        T_CPP token = this->fifo_peek.read();
+
+        uint64_t int_val = static_cast<sc_dt::sc_int<32>> (this->fifo_peek.read()).value();
+        T_CPP token = reinterpret_cast<T_CPP*>(&int_val)[0];
         this->data_stream.write(token);
       }
 
-      this->fifo_read.write(false);
+      this->fifo_read.write(sc_dt::SC_LOGIC_0);
       this->waitCycles(1);
     }
   }
 
-  inline uint32_t evaluateAtomically() {
+  inline sc_dt::sc_lv<32> evaluateAtomically() {
 
     return this->atomic_implementation->operator()(
-        this->asPointer(this->data_buffer.read()), // The device buffer pointer
+        this->asPointer(
+          (static_cast<sc_dt::sc_int<64>> (this->data_buffer.read())).value()), // The device buffer pointer
                                                    // (allocated else where)
         this->asPointer(
-            this->meta_buffer.read()), // The device meta buffer pointer
+            (static_cast<sc_dt::sc_int<64>> (this->meta_buffer.read())).value()), // The device meta buffer pointer
                                        // (allocated else where)
-        this->alloc_size.read(),       // Allocated size in words
-        this->head.read(),             // head index of the data buffer
-        this->tail.read(),             // tail index of the deta buffer
+        (static_cast<sc_dt::sc_int<32>> (this->alloc_size.read())).value(),       // Allocated size in words
+        (static_cast<sc_dt::sc_int<32>> (this->head.read())).value(),             // head index of the data buffer
+        (static_cast<sc_dt::sc_int<32>> (this->tail.read())).value(),             // tail index of the deta buffer
         this->data_stream.size(), // number of elements in the attached fifo
         this->data_stream,        // atomic data stream
         this->meta_stream         // atomic meta stream
@@ -448,7 +467,7 @@ public:
   State nextState() override {
     switch (this->state.read()) {
     case State::BUSIF_IDLE:
-      if (this->ap_start.read() == true)
+      if (this->ap_start.read() == sc_dt::SC_LOGIC_1)
         return State::BUSIF_STARTUP_DELAY;
       else
         return State::BUSIF_IDLE;

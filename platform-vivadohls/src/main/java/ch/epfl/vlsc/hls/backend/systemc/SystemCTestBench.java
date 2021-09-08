@@ -48,7 +48,8 @@ public interface SystemCTestBench {
         emitter().emit("struct Argument {");
         {
             emitter().increaseIndentation();
-            String pointerType = ObjectFactory.getNewLogicVector(64).getType();
+            // String pointerType = ObjectFactory.getNewLogicVector(64).getType();
+            String pointerType = "uint64_t"; // FARAZ: Remove Hard Code After Placing Design Patterns For Verilator/VivadoHLS Switch
             ImmutableList<String> args = ImmutableList.of(
                     "data_buffer", "meta_buffer", "alloc_size", "head", "tail"
             );

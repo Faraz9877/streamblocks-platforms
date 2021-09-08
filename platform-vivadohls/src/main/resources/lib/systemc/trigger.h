@@ -9,25 +9,25 @@ namespace streamblocks_rtl {
 class AbstractTrigger : public sc_core::sc_module {
 public:
   sc_core::sc_in_clk ap_clk;
-  sc_core::sc_in<bool> ap_rst_n;
-  sc_core::sc_in<bool> ap_start;
-  sc_core::sc_out<bool> ap_done;
-  sc_core::sc_out<bool> ap_idle;
-  sc_core::sc_out<bool> ap_ready;
+  sc_core::sc_in<sc_dt::sc_logic> ap_rst_n;
+  sc_core::sc_in<sc_dt::sc_logic> ap_start;
+  sc_core::sc_out<sc_dt::sc_logic> ap_done;
+  sc_core::sc_out<sc_dt::sc_logic> ap_idle;
+  sc_core::sc_out<sc_dt::sc_logic> ap_ready;
 
-  sc_core::sc_in<bool> all_sleep;
-  sc_core::sc_in<bool> all_sync_sleep;
-  sc_core::sc_in<bool> all_waited;
+  sc_core::sc_in<sc_dt::sc_logic> all_sleep;
+  sc_core::sc_in<sc_dt::sc_logic> all_sync_sleep;
+  sc_core::sc_in<sc_dt::sc_logic> all_waited;
 
-  sc_core::sc_out<bool> sleep;
-  sc_core::sc_out<bool> sync_sleep;
-  sc_core::sc_out<bool> waited;
+  sc_core::sc_out<sc_dt::sc_logic> sleep;
+  sc_core::sc_out<sc_dt::sc_logic> sync_sleep;
+  sc_core::sc_out<sc_dt::sc_logic> waited;
 
-  sc_core::sc_in<uint32_t> actor_return;
-  sc_core::sc_in<bool> actor_done;
-  sc_core::sc_in<bool> actor_ready;
-  sc_core::sc_in<bool> actor_idle;
-  sc_core::sc_out<bool> actor_start;
+  sc_core::sc_in<sc_dt::sc_lv<32>> actor_return;
+  sc_core::sc_in<sc_dt::sc_logic> actor_done;
+  sc_core::sc_in<sc_dt::sc_logic> actor_ready;
+  sc_core::sc_in<sc_dt::sc_logic> actor_idle;
+  sc_core::sc_out<sc_dt::sc_logic> actor_start;
 
 protected:
   enum State : int {
@@ -42,7 +42,7 @@ protected:
 
   // a clock value tagged with return code
   struct TaggedClock {
-    sc_core::sc_signal<uint32_t> return_code;
+    sc_core::sc_signal<sc_dt::sc_lv<32>> return_code;
     sc_core::sc_signal<bool> start;
   };
 
@@ -76,7 +76,7 @@ public:
    *
    * @return uint32_t
    */
-  inline uint32_t getReturnCode();
+  inline sc_dt::sc_lv<32> getReturnCode();
 
   /**
    * @brief @c [SC_CTHREAD] Set the Last Wait output

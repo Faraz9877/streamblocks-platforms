@@ -13,6 +13,9 @@ target_include_directories(art-plink PUBLIC ./include)
 target_link_libraries(art-plink art-systemc)
 set_target_properties(art-plink PROPERTIES CXX_STANDARD 14)
 
+find_package(SystemCLanguage CONFIG REQUIRED)
+target_link_libraries(art-plink SystemC::systemc)
+
 
 if (OPENCL_VERBOSE)
         target_compile_definitions(art-plink PUBLIC OCL_VERBOSE=1)

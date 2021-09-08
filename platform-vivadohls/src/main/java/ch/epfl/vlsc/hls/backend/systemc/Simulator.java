@@ -12,7 +12,7 @@ import se.lth.cs.tycho.ir.network.Network;
 import se.lth.cs.tycho.ir.util.ImmutableList;
 import se.lth.cs.tycho.reporting.CompilationException;
 import se.lth.cs.tycho.reporting.Diagnostic;
-
+import se.lth.cs.tycho.type.Type;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -81,26 +81,33 @@ public interface Simulator {
     }
 
     default void getWriter(PortDecl inputPort) {
-
-        LogicVector type = getSCPortType(inputPort);
-
-        emitter().emit("Writer<%s> writer_%s(opts.alloc_size, \"%2$s\");", type.getType(), inputPort.getName());
+        // FARAZ: Changed to reflect the exact data type in the CAL program  
+        // LogicVector type = getSCPortType(inputPort);
+        Type type = backend().types().declaredPortType(inputPort);
+        String typeStr = backend().typeseval().type(type);
+        
+        emitter().emit("Writer<%s> writer_%s(opts.alloc_size, \"%2$s\");", typeStr, inputPort.getName());
         emitter().emitNewLine();
     }
 
     default void getReader(PortDecl outputPort) {
 
-        LogicVector type = getSCPortType(outputPort);
+        // LogicVector type = getSCPortType(outputPort);
+        Type type = backend().types().declaredPortType(outputPort);
+        String typeStr = backend().typeseval().type(type);
 
-        emitter().emit("Reader<%s> reader_%s(opts.alloc_size, \"%2$s\");", type.getType(), outputPort.getName());
+        emitter().emit("Reader<%s> reader_%s(opts.alloc_size, \"%2$s\");", typeStr, outputPort.getName());
         emitter().emitNewLine();
 
     }
 
     default void getHostBuffer(PortDecl port) {
 
-        LogicVector type = getSCPortType(port);
-        emitter().emit("SimulationBuffer<%s> buffer_%s(opts.alloc_size);", type.getType(), port.getName());
+        // LogicVector type = getSCPortType(port);
+        Type type = backend().types().declaredPortType(port);
+        String typeStr = backend().typeseval().type(type);
+
+        emitter().emit("SimulationBuffer<%s> buffer_%s(opts.alloc_size);", typeStr, port.getName());
         emitter().emitNewLine();
     }
 

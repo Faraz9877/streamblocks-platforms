@@ -18,7 +18,7 @@ public class LogicVectorVerilator extends LogicVector {
         } else if (getWidth() <= 32) {
             return "uint32_t";
         } else if (getWidth() <= 64) {
-            return "vluint64_t";
+            return "uint64_t";
         } else {
             return " sc_bv<" + getWidth() + "> ";
         }
