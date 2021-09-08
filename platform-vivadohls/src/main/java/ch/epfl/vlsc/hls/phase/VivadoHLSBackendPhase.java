@@ -2,6 +2,7 @@ package ch.epfl.vlsc.hls.phase;
 
 import ch.epfl.vlsc.hls.backend.VivadoHLSBackend;
 import ch.epfl.vlsc.hls.backend.scripts.IdealWeight;
+import ch.epfl.vlsc.hls.backend.systemc.SystemCNetwork;
 import ch.epfl.vlsc.platformutils.ControllerToGraphviz;
 import ch.epfl.vlsc.platformutils.PathUtils;
 import ch.epfl.vlsc.settings.PlatformSettings;
@@ -519,34 +520,40 @@ public class VivadoHLSBackendPhase implements Phase {
 
             if(backend.context().getConfiguration().get(PlatformSettings.enableSystemC)) {
                 // -- systemc material
-                Files.copy(getClass().getResourceAsStream("/lib/systemc/queue.h"),
+                String pltfrm;
+                if(SystemCNetwork.useVerilator())
+                    pltfrm = "verilator/";
+                else
+                    pltfrm = "vivadohls/";
+                
+                Files.copy(getClass().getResourceAsStream("/lib/systemc/" + pltfrm + "queue.h"),
                         PathUtils.getTarget(backend.context()).resolve("systemc/include/queue.h"),
                         StandardCopyOption.REPLACE_EXISTING);
-                Files.copy(getClass().getResourceAsStream("/lib/systemc/trigger.h"),
+                Files.copy(getClass().getResourceAsStream("/lib/systemc/" + pltfrm + "trigger.h"),
                         PathUtils.getTarget(backend.context()).resolve("systemc/include/trigger.h"),
                         StandardCopyOption.REPLACE_EXISTING);
-                Files.copy(getClass().getResourceAsStream("/lib/systemc/trigger.cpp"),
+                Files.copy(getClass().getResourceAsStream("/lib/systemc/" + pltfrm + "trigger.cpp"),
                         PathUtils.getTarget(backend.context()).resolve("systemc/src/trigger.cpp"),
                         StandardCopyOption.REPLACE_EXISTING);
-                Files.copy(getClass().getResourceAsStream("/lib/systemc/profiler.cpp"),
+                Files.copy(getClass().getResourceAsStream("/lib/systemc/" + pltfrm + "profiler.cpp"),
                         PathUtils.getTarget(backend.context()).resolve("systemc/src/profiler.cpp"),
                         StandardCopyOption.REPLACE_EXISTING);
-                Files.copy(getClass().getResourceAsStream("/lib/systemc/profiler.h"),
+                Files.copy(getClass().getResourceAsStream("/lib/systemc/" + pltfrm + "profiler.h"),
                         PathUtils.getTarget(backend.context()).resolve("systemc/include/profiler.h"),
                         StandardCopyOption.REPLACE_EXISTING);
-                Files.copy(getClass().getResourceAsStream("/lib/systemc/simulation-iostage.h"),
+                Files.copy(getClass().getResourceAsStream("/lib/systemc/" + pltfrm + "simulation-iostage.h"),
                         PathUtils.getTarget(backend.context()).resolve("systemc/include/simulation-iostage.h"),
                         StandardCopyOption.REPLACE_EXISTING);
-                Files.copy(getClass().getResourceAsStream("/lib/systemc/simulate.h"),
+                Files.copy(getClass().getResourceAsStream("/lib/systemc/" + pltfrm + "simulate.h"),
                         PathUtils.getTarget(backend.context()).resolve("systemc/include/simulate.h"),
                         StandardCopyOption.REPLACE_EXISTING);
-                Files.copy(getClass().getResourceAsStream("/lib/systemc/debug_macros.h"),
+                Files.copy(getClass().getResourceAsStream("/lib/systemc/" + pltfrm + "debug_macros.h"),
                         PathUtils.getTarget(backend.context()).resolve("systemc/include/debug_macros.h"),
                         StandardCopyOption.REPLACE_EXISTING);
-                Files.copy(getClass().getResourceAsStream("/lib/systemc/common.h"),
+                Files.copy(getClass().getResourceAsStream("/lib/systemc/" + pltfrm + "common.h"),
                         PathUtils.getTarget(backend.context()).resolve("systemc/include/common.h"),
                         StandardCopyOption.REPLACE_EXISTING);
-                Files.copy(getClass().getResourceAsStream("/lib/systemc/CMakeLists.txt"),
+                Files.copy(getClass().getResourceAsStream("/lib/systemc/" + pltfrm + "CMakeLists.txt"),
                         PathUtils.getTarget(backend.context()).resolve("systemc/CMakeLists.txt"),
                         StandardCopyOption.REPLACE_EXISTING);
             }
